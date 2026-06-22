@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>MagicTower v1.12 — HTML/JS remake</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="game">
+    <aside class="hud">
+      <h1>MagicTower <span>v1.12</span></h1>
+      <div class="stat"><span>Level</span><b id="hud-level">1</b></div>
+      <div class="stat hp"><span>HP</span><b id="hud-hp">1000</b></div>
+      <div class="stat"><span>ATK</span><b id="hud-attack">10</b></div>
+      <div class="stat"><span>DEF</span><b id="hud-defend">10</b></div>
+      <div class="stat"><span>Gold</span><b id="hud-money">0</b></div>
+      <div class="stat"><span>EXP</span><b id="hud-exp">0</b></div>
+      <div class="keys">
+        <div class="key y"><span>Yellow</span><b id="hud-ykey">0</b></div>
+        <div class="key b"><span>Blue</span><b id="hud-bkey">0</b></div>
+        <div class="key r"><span>Red</span><b id="hud-rkey">0</b></div>
+      </div>
+      <div class="stat floor"><span>Floor</span><b id="hud-floor">0</b></div>
+      <div class="stat time"><span>Time</span><b id="hud-time">0m 0s</b></div>
+      <div class="help">
+        Arrow keys move · L: monster forecast · J: floor jump<br />
+        In shops: W/S to select · Space to confirm
+      </div>
+      <div id="log" class="log"></div>
+    </aside>
+
+    <main class="stage">
+      <canvas id="map" width="792" height="792"></canvas>
+      <div id="battle" class="overlay"></div>
+      <div id="shop" class="overlay"></div>
+      <div id="forecast" class="panel"></div>
+      <div id="jump" class="panel"></div>
+    </main>
+
+    <!-- On-screen controls (mobile / touch). Movement = tap the map directly. -->
+    <div class="touch">
+      <div class="touch-hint">Tap the map to move →</div>
+      <div class="abtns">
+        <button data-k="KeyL">Forecast<br /><small>L</small></button>
+        <button data-k="KeyJ">Jump<br /><small>J</small></button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="game.js"></script>
+</body>
+</html>

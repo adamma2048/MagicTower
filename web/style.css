@@ -1,0 +1,258 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* The map canvas is a square that always fits the viewport — never taller than
+   the visible area, so the player (which can spawn at the bottom row) is always
+   on screen. Internal canvas resolution stays 792 for crisp pixels. */
+:root { --map: min(792px, calc(100vh - 48px), calc(100vw - 290px)); }
+
+body {
+  background: #0b0d1a;
+  color: #e7e9f3;
+  font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.game {
+  display: flex;
+  gap: 16px;
+  background: #11142a;
+  border: 1px solid #2a2f55;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  max-height: 100vh;
+}
+
+/* ---- HUD ---- */
+.hud {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: var(--map);
+  overflow-y: auto;
+}
+.hud h1 {
+  font-size: 26px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+  color: #ffd86b;
+}
+.hud h1 span { font-size: 13px; color: #8b90c0; }
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1a1e3c;
+  border: 1px solid #2a2f55;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+.stat span { color: #9aa0d0; }
+.stat b { font-size: 16px; color: #fff; }
+.stat.hp b { color: #6bff9c; }
+.stat.floor b { color: #ffd86b; }
+.stat.time b { font-size: 13px; color: #c7cbf0; }
+
+.keys { display: flex; gap: 6px; }
+.key {
+  flex: 1;
+  text-align: center;
+  border-radius: 6px;
+  padding: 6px 2px;
+  font-size: 12px;
+  border: 1px solid #2a2f55;
+}
+.key span { display: block; color: #c7cbf0; }
+.key b { font-size: 16px; }
+.key.y { background: #3a3414; } .key.y b { color: #ffe066; }
+.key.b { background: #15233f; } .key.b b { color: #6bb8ff; }
+.key.r { background: #3a1620; } .key.r b { color: #ff6b8b; }
+
+.help {
+  font-size: 11px;
+  color: #7c81b0;
+  line-height: 1.6;
+  border-top: 1px dashed #2a2f55;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.log {
+  flex: 1;
+  min-height: 120px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #0c0e1f;
+  border: 1px solid #2a2f55;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.log-line { color: #b9bef0; border-bottom: 1px solid #181c38; padding-bottom: 2px; }
+.log-line:first-child { color: #ffd86b; }
+
+/* ---- stage / canvas ---- */
+.stage { position: relative; width: var(--map); height: var(--map); flex: 0 0 auto; }
+#map {
+  width: var(--map);
+  height: var(--map);
+  background: #000;
+  border: 2px solid #2a2f55;
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+
+/* ---- overlays ---- */
+.overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 7, 18, 0.82);
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+.battle-box, .shop-box, .fc-box {
+  background: #161a35;
+  border: 1px solid #3a4080;
+  border-radius: 10px;
+  padding: 22px 26px;
+  min-width: 320px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+.battle-box h3, .shop-box h3, .fc-box h3 {
+  color: #ffd86b;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.battle-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid #262b52;
+  font-size: 15px;
+}
+.battle-row span { color: #9aa0d0; }
+.battle-row b { color: #fff; }
+
+.shop-opt {
+  padding: 11px 12px;
+  border-radius: 6px;
+  font-size: 15px;
+  color: #c7cbf0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.shop-opt.sel { background: #2a3170; color: #fff; }
+.shop-hint { margin-top: 12px; font-size: 12px; color: #7c81b0; text-align: center; }
+
+.panel-close {
+  display: block;
+  margin: 16px auto 0;
+  padding: 10px 28px;
+  background: #2a3170;
+  border: 1px solid #3a4080;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.panel-close:hover { background: #38409a; }
+
+/* ---- panels (forecast / jump) ---- */
+.panel {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 7, 18, 0.9);
+  border-radius: 6px;
+  padding: 40px;
+  overflow: auto;
+}
+.fc-box { margin: 0 auto; min-width: 480px; }
+.fc-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fc-box th, .fc-box td { padding: 6px 8px; text-align: center; border-bottom: 1px solid #262b52; }
+.fc-box th { color: #ffd86b; }
+.fc-box td.loss { color: #ff8b8b; font-weight: bold; }
+
+.jump-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 14px 0; }
+.jump-f {
+  background: #1a1e3c;
+  border: 1px solid #3a4080;
+  color: #e7e9f3;
+  padding: 10px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.jump-f:hover { background: #2a3170; }
+
+/* ---- on-screen touch controls (movement is tap-the-map) ---- */
+.touch { display: none; }            /* hidden on desktop; shown on touch / small screens */
+.touch-hint { color: #7c81b0; font-size: 13px; }
+.abtns { display: flex; gap: 10px; }
+.abtns button {
+  background: #1a1e3c;
+  border: 1px solid #3a4080;
+  color: #ffd86b;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.abtns button small { color: #7c81b0; }
+.abtns button:active { background: #2a3170; }
+
+/* ---- mobile / touch layout ---- */
+@media (max-width: 860px), (pointer: coarse) {
+  body { height: auto; min-height: 100vh; overflow: auto; align-items: flex-start; padding: 8px; }
+  :root { --map: min(calc(100vw - 24px), calc(100vh - 200px)); }
+  .game {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    max-height: none;
+    width: 100%;
+  }
+  /* compact HUD: wrap stat chips into rows above the map */
+  .hud {
+    width: var(--map);
+    max-height: none;
+    overflow: visible;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+    order: 1;
+  }
+  .hud h1 { width: 100%; font-size: 18px; margin: 0; }
+  .stat { flex: 1 1 28%; padding: 4px 8px; font-size: 12px; }
+  .stat b { font-size: 14px; }
+  .keys { flex: 1 1 100%; }
+  .help { display: none; }
+  .log { flex: 1 1 100%; min-height: 0; max-height: 56px; }
+  .stage { order: 2; }
+  .touch { display: flex; order: 3; width: var(--map); justify-content: space-between; align-items: center; gap: 12px; padding: 4px 2px; }
+  /* panels/overlays must fit a phone */
+  .panel { padding: 12px; }
+  .fc-box { min-width: 0; width: 100%; padding: 14px; }
+  .fc-box table { font-size: 11px; }
+  .fc-box th, .fc-box td { padding: 4px 3px; }
+  .battle-box, .shop-box { min-width: 0; width: 88%; padding: 18px; }
+  .jump-grid { grid-template-columns: repeat(5, 1fr); }
+}
