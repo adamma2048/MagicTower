@@ -27,9 +27,43 @@ buttons appear automatically on small / touch screens).
 | **W / S / Space** | Tap an option | Navigate / confirm inside a shop |
 
 Tapping (or clicking) the map steps the hero one tile toward the tap along the
-dominant axis — works on both touch and desktop.
+dominant axis — works on both touch and desktop. Press-and-hold (or hold an
+arrow key) to keep moving; dragging while held re-steers.
 
 Panels and shops are tappable; overlays have a Close button (or tap the backdrop).
+
+The HUD also has **🎒 Package** (inventory — tap an item for its instruction,
+usable items get a Use button), **↻ Restart** (confirm → resets the save), and
+**🔊 Music** (BGM on/off, remembered in `localStorage`).
+
+## Music
+
+BGM (the tswBGM-3.0 pack) is hosted on the Sekai games CDN next to the sprites:
+
+```
+https://prod-data.sekai.chat/v3-games/dist/880ab36a-6b07-44e3-8e65-204ac7871632/bgm/
+```
+
+Tracks load on demand — one at a time, so only the current track is downloaded.
+A local copy is kept in `web/bgm/`; use `?bgm=bgm` to play from it offline.
+
+Browsers block audio until the first user interaction, so playback starts on
+your first tap or keypress. The track is derived from game state and only
+swapped when it actually changes:
+
+| When | Track |
+|---|---|
+| Floor 0 (prologue) | `Opening` |
+| Floors 1–5 / 6–10 / 11–15 / 16–20 / 21–25 | `Block1` … `Block5` |
+| Floor 26 (underground) | `PhantomFloor` |
+| Boss fights (53 / 59 / 188 / 198) | `AgainstGreatMagicMaster` / `AgainstZeno` / `AgainstVampire` / `LastBattle` |
+
+Regular monsters keep the floor music — those fights last a couple of seconds,
+so swapping tracks for each one would chop the audio constantly.
+
+The remaining tracks in the pack (`Fairy`, `Princess`, `Ending`, `GameOver`,
+`LuckyGold`, `AgainstKnightArmy`, `AgainstSkeletonArmy`) are unused — the story
+events and win/lose states they belong to aren't implemented in this port.
 
 ## How the original logic maps over
 

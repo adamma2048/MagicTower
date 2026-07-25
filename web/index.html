@@ -138,6 +138,12 @@ body {
 .cf-no { background: #2a3170; color: #fff; }
 .cf-no:active { background: #38409a; }
 
+/* ---- bgm toggle ---- */
+.bgm-btn { background: #14304a; border-color: #3a6a90; color: #b6e2ff; }
+.bgm-btn:hover { background: #1b4260; }
+.bgm-btn:active { background: #245678; }
+.bgm-btn.off { background: #23252f; border-color: #3a3f52; color: #7c81b0; }
+
 /* ---- package / inventory ---- */
 .pkg-btn { background: #163a2c; border-color: #3a805a; color: #b6ffd0; }
 .pkg-btn:hover { background: #205541; }
@@ -331,10 +337,11 @@ body {
       <div class="stat"><span>EXP</span><b id="hud-exp">0</b></div>
       <div class="stat floor"><span>Floor</span><b id="hud-floor">0</b></div>
       <div class="keys">
-        <div class="key y"><span>Yellow</span><b id="hud-ykey">0</b></div>
-        <div class="key b"><span>Blue</span><b id="hud-bkey">0</b></div>
-        <div class="key r"><span>Red</span><b id="hud-rkey">0</b></div>
+        <div class="key y"><span>Yellow</span><b id="hud-ykey">1</b></div>
+        <div class="key b"><span>Blue</span><b id="hud-bkey">1</b></div>
+        <div class="key r"><span>Red</span><b id="hud-rkey">1</b></div>
       </div>
+      <button id="bgm-btn" class="restart bgm-btn">🔊 Music</button>
       <button id="pkg-btn" class="restart pkg-btn">🎒 Package</button>
       <button id="restart" class="restart">↻ Restart</button>
       <div class="help">
@@ -442,7 +449,7 @@ const LvMap = LVMAP_SRC.map(f => f.map(r => r.slice())); // deep clone (tiles ge
 
 const player = {
   level: 1, hp: 1000, attack: 10, defend: 10, money: 0, exp: 0,
-  Ykey: 0, Bkey: 0, Rkey: 0,
+  Ykey: 1, Bkey: 1, Rkey: 1,   // start with one of each key
   toward: 1, // 0-left 1-down 2-right 3-up
   posX: 5, posY: 9,
 };
@@ -536,6 +543,7 @@ function draw() {
   }
   if (battle) drawBattleBanner();
   updateHUD();
+  updateBgm();      // keeps the track in sync with floor / boss fight (no-op if unchanged)
 }
 
 // Lightweight, non-blocking HP readout drawn across the top of the board during
@@ -885,6 +893,71 @@ canvas.addEventListener("pointerup", endPointer);
 canvas.addEventListener("pointercancel", endPointer);
 canvas.style.cursor = "pointer";
 
+// ---- BGM (tswBGM-3.0 pack) -------------------------------------------------
+// Tracks are hosted on the Sekai games CDN alongside the sprites (same
+// sekaiapp-prod-data bucket). Override with ?bgm=<base> to point at a local
+// ./bgm folder for offline dev. One <audio> element; the track is derived from
+// game state and only swapped when it actually changes, so it survives redraws.
+const BGM_BASE = new URLSearchParams(location.search).get("bgm")
+  || "https://prod-data.sekai.chat/v3-games/dist/880ab36a-6b07-44e3-8e65-204ac7871632/bgm";
+const BGM_KEY = "magictower_bgm_on";
+// Boss id -> its own theme. Regular fights keep the floor music (switching for
+// every trash mob would chop the audio every few seconds).
+const BOSS_BGM = { 53: "AgainstGreatMagicMaster", 59: "AgainstZeno", 188: "AgainstVampire", 198: "LastBattle" };
+function floorBgm(f) {
+  if (f <= 0) return "Opening";
+  if (f <= 5) return "Block1";
+  if (f <= 10) return "Block2";
+  if (f <= 15) return "Block3";
+  if (f <= 20) return "Block4";
+  if (f <= 25) return "Block5";
+  return "PhantomFloor";                 // underground boss floor
+}
+function desiredBgm() {
+  if (battle && BOSS_BGM[battle.id]) return BOSS_BGM[battle.id];
+  return floorBgm(currentFloor);
+}
+
+const audio = new Audio();
+audio.loop = true;
+audio.volume = 0.4;
+audio.preload = "none";
+let bgmOn = localStorage.getItem(BGM_KEY) !== "0";   // default on
+let bgmUnlocked = false;      // browsers block audio until a user gesture
+let bgmTrack = null;          // currently loaded track name
+
+function updateBgm() {
+  const want = desiredBgm();
+  if (!bgmOn || !bgmUnlocked) return;
+  if (want !== bgmTrack) {
+    bgmTrack = want;
+    audio.src = `${BGM_BASE}/${want}.mp3`;
+  }
+  if (audio.paused) audio.play().catch(() => { /* autoplay blocked; retry on next gesture */ });
+}
+// First user gesture unlocks playback (autoplay policy).
+function unlockBgm() {
+  if (bgmUnlocked) return;
+  bgmUnlocked = true;
+  updateBgm();
+}
+document.addEventListener("pointerdown", unlockBgm, { once: false });
+document.addEventListener("keydown", unlockBgm, { once: false });
+
+const bgmBtn = document.getElementById("bgm-btn");
+function renderBgmBtn() {
+  bgmBtn.textContent = bgmOn ? "🔊 Music" : "🔇 Music";
+  bgmBtn.classList.toggle("off", !bgmOn);
+}
+bgmBtn.addEventListener("click", () => {
+  bgmOn = !bgmOn;
+  localStorage.setItem(BGM_KEY, bgmOn ? "1" : "0");
+  renderBgmBtn();
+  if (bgmOn) { bgmUnlocked = true; updateBgm(); }
+  else { audio.pause(); }
+});
+renderBgmBtn();
+
 // ---- persistence: auto-save to localStorage --------------------------------
 const SAVE_KEY = "magictower_save_v1";
 let restarting = false;   // guard so the reload's beforeunload doesn't re-save
@@ -986,6 +1059,7 @@ window.__mt = {
   get floorMap() { return LvMap[currentFloor]; },
   get playerImgOk() { return !!playerImg[player.toward]; },
   player, items,     // live refs (debug)
+  get bgm() { return { track: bgmTrack, want: desiredBgm(), on: bgmOn, paused: audio.paused, src: audio.src }; },
 };
 
 // ---- boot -----------------------------------------------------------------

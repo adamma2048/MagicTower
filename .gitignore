@@ -1,2 +1,4 @@
 /out
 *,iml
+# BGM is served from the Sekai CDN (see web/README.md); local copy is dev-only
+web/bgm/
