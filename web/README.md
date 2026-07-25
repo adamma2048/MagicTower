@@ -70,9 +70,17 @@ pitch-dropping tone (the weight):
 
 | Sound | When | Character |
 |---|---|---|
-| `hit` | your blow lands | bright, snappy — noise @1.9kHz + 240→60Hz triangle |
-| `hurt` | the monster damages you | duller and lower — noise @500Hz + 180→70Hz square |
+| `hit` | your fist lands | low "whump" — 170→45Hz sine + low-passed noise @700Hz |
+| `hurt` | the monster hits you | heavier, duller — 120→38Hz sine + low-passed noise @380Hz |
 | `win` | monster defeated | short rising 520→990Hz triangle |
+
+The impacts are deliberately **low-passed with a few ms of attack ramp**: an
+instant high-frequency spike reads as a gunshot, while a soft-onset low thump
+reads as a punch — this game is fought with fists.
+
+`ROUND_MS` (280ms) is the single pacing knob — the hit sound, the monster's
+damage flash and the haptic all fire together on each round, so they stay in
+sync. Change that one constant to speed the whole exchange up or down.
 
 SFX follow the same **🔊 Music** switch, and share its unlock gesture (the Web
 Audio context can only start after a user interaction).
