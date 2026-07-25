@@ -61,6 +61,22 @@ swapped when it actually changes:
 Regular monsters keep the floor music — those fights last a couple of seconds,
 so swapping tracks for each one would chop the audio constantly.
 
+### Combat SFX
+
+Hit sounds are **synthesised at runtime with the Web Audio API** — no audio
+files, so there is nothing extra to download and no licensing to track. Each
+combat round plays a filtered noise burst (the "crack") layered with a short
+pitch-dropping tone (the weight):
+
+| Sound | When | Character |
+|---|---|---|
+| `hit` | your blow lands | bright, snappy — noise @1.9kHz + 240→60Hz triangle |
+| `hurt` | the monster damages you | duller and lower — noise @500Hz + 180→70Hz square |
+| `win` | monster defeated | short rising 520→990Hz triangle |
+
+SFX follow the same **🔊 Music** switch, and share its unlock gesture (the Web
+Audio context can only start after a user interaction).
+
 The remaining tracks in the pack (`Fairy`, `Princess`, `Ending`, `GameOver`,
 `LuckyGold`, `AgainstKnightArmy`, `AgainstSkeletonArmy`) are unused — the story
 events and win/lose states they belong to aren't implemented in this port.

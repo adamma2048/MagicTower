@@ -678,8 +678,8 @@ function tryBattle(id, cx, cy) {
 
   const timer = setInterval(() => {
     // one round (BattleUtil.attack)
-    if (player.attack > m.defend) battle.mhp -= (player.attack - m.defend);
-    if (battle.mhp > 0 && m.attack > player.defend) player.hp -= (m.attack - player.defend);
+    if (player.attack > m.defend) { battle.mhp -= (player.attack - m.defend); sfx.hit(); }
+    if (battle.mhp > 0 && m.attack > player.defend) { player.hp -= (m.attack - player.defend); sfx.hurt(); }
     battle.flash = !battle.flash;          // toggle the monster's hit flash
     if (battle.flash) vibrate("light");    // haptic on each strike/flash
     if (battle.mhp <= 0) {
@@ -690,6 +690,7 @@ function tryBattle(id, cx, cy) {
       move(cx, cy);                         // hero advances onto the cleared tile
       msg(`Defeated ${m.name}! Gold +${m.money} EXP +${m.exp}`);
       vibrate("heavy");                     // victory thud
+      sfx.win();
       battle = null;
       inConversation = false;
       save();
@@ -937,6 +938,7 @@ function updateBgm() {
 }
 // First user gesture unlocks playback (autoplay policy).
 function unlockBgm() {
+  sfx.unlock();               // the SFX AudioContext needs the same gesture
   if (bgmUnlocked) return;
   bgmUnlocked = true;
   updateBgm();
@@ -961,6 +963,60 @@ bgmBtn.addEventListener("click", () => {
   else { audio.pause(); }
 });
 renderBgmBtn();
+
+// ---- SFX: synthesised with Web Audio (no asset files) ----------------------
+// Combat is a fast loop (one round every 140ms), so the hits are generated on
+// the fly: a filtered noise burst for the "crack" plus a short pitch-dropping
+// tone for weight. Follows the same on/off switch as the music.
+const sfx = (() => {
+  let ctx = null, master = null, noise = null;
+  function init() {
+    if (ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.5;
+    master.connect(ctx.destination);
+    // one reusable buffer of white noise
+    noise = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+    const d = noise.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  function burst({ freq, q, level, dur }) {
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = noise;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = q;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(level, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(t); src.stop(t + dur);
+  }
+  function tone({ type, from, to, level, dur }) {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator(); osc.type = type;
+    osc.frequency.setValueAtTime(from, t);
+    osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(level, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t + dur);
+  }
+  const ready = () => bgmOn && ctx && ctx.state === "running";
+  return {
+    unlock() { init(); if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); },
+    // player lands a blow — bright, snappy crack + low thump
+    hit() { if (!ready()) return; burst({ freq: 1900, q: 0.7, level: 0.35, dur: 0.09 });
+            tone({ type: "triangle", from: 240, to: 60, level: 0.3, dur: 0.1 }); },
+    // player takes damage — duller and lower, so it reads differently
+    hurt() { if (!ready()) return; burst({ freq: 500, q: 1.2, level: 0.22, dur: 0.13 });
+             tone({ type: "square", from: 180, to: 70, level: 0.16, dur: 0.14 }); },
+    // monster defeated
+    win() { if (!ready()) return; tone({ type: "triangle", from: 520, to: 990, level: 0.28, dur: 0.18 }); },
+  };
+})();
 
 // ---- persistence: auto-save to localStorage --------------------------------
 const SAVE_KEY = "magictower_save_v1";
