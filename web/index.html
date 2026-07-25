@@ -943,6 +943,10 @@ function unlockBgm() {
 }
 document.addEventListener("pointerdown", unlockBgm, { once: false });
 document.addEventListener("keydown", unlockBgm, { once: false });
+// Mobile/desktop browsers pause audio when the tab is backgrounded and do not
+// resume on their own — pick the track back up when the player comes back.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) updateBgm(); });
+window.addEventListener("focus", () => updateBgm());
 
 const bgmBtn = document.getElementById("bgm-btn");
 function renderBgmBtn() {
